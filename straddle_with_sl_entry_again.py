@@ -16,8 +16,6 @@ exp = opt.get_expiry('SPY')
 
 spot_df, resamp = fut.outliers_resampled(fut.get_spot('SPY'))
 
-
-
 sl_pct = 1.5
 
 def open_trade(date, strike, call_df, put_df, sl_pct, start_time = pd.Timestamp('09:30:00').time(), spot=None):
@@ -101,11 +99,9 @@ def sl_check(call_df, call_sl, call_entry_time, put_df, put_sl, put_entry_time):
         sl_dict['actual_sl'] = put_actual_sl
         
         return sl_dict
-    
-    
+
     return False
         
-
 def re_check_sl(DF, sl, start_time):
     
     df = DF.copy()
@@ -131,7 +127,6 @@ def re_check_sl(DF, sl, start_time):
         # exit_dict['exit_time'] = df.loc[(df.index.time >= pd.Timestamp('15:59:00').time())].index[0]
         # exit_dict['exit_price'] = df.loc[(df.index.time >= pd.Timestamp('15:59:00').time())].iloc[0]['Last']
         exit_dict['exit_type'] = 'MKT Closing'
-        
         return exit_dict
         
 def exit_straddle(DF, exit_time = pd.Timestamp('15:59:00').time()):
@@ -150,7 +145,6 @@ def exit_straddle(DF, exit_time = pd.Timestamp('15:59:00').time()):
     exit_dict['exit_time'] = exit_time 
     
     return exit_dict
-
 
 def straddle_re_entry(ticker, spot_df, sl_pct, start_time = pd.Timestamp('09:30:00').time()):
     
@@ -260,8 +254,6 @@ def straddle_re_entry(ticker, spot_df, sl_pct, start_time = pd.Timestamp('09:30:
                 
                 tradebook = pd.concat([tradebook, open_trades])
                 
-            
-            
             try:
                 spot = day_spot.loc[day_spot['Time'] >= sl_hit_time.time()].iloc[0]['Last']
             except:
@@ -291,7 +283,6 @@ def straddle_re_entry(ticker, spot_df, sl_pct, start_time = pd.Timestamp('09:30:
                 exception[f'{date}_sl'] = f'date : {date}, expiry : {expiry}, strike : {strike}'
                 break
                 
-            
             call_sl = open_trades.loc[datetime, 'call_sl']
             put_sl = open_trades.loc[datetime, 'put_sl']
             
@@ -317,43 +308,31 @@ def straddle_re_entry(ticker, spot_df, sl_pct, start_time = pd.Timestamp('09:30:
     
     tradebook['Call_pl'] = tradebook['call_entry'] - tradebook['call_exit']
     tradebook['Put_pl'] = tradebook['put_entry'] - tradebook['put_exit']
-
     tradebook['PL'] = tradebook['Call_pl'] + tradebook['Put_pl']
+    
     return tradebook
-
-
 
 ''' diff SLs '''
 tickers = ['SPY', 'QQQ']
 
-ticker = 'SPY'
-
+# sl_pct_list = np.arange(1.50, 2.05, 0.05)
 sl_pct_list = [1.50, 1.55, 1.60, 1.65, 1.70, 1.75, 1.80, 1.85, 1.90, 1.95, 2.00]
 
 result = {}
 points = {}
 
-
 for ticker in tickers:
     spot_df, resamp = fut.outliers_resampled(fut.get_spot(ticker))
-    half_day = ['2016-11-25','2017-07-03', '2017-11-24', '2018-11-23', '2019-11-29', '2019-12-24', '2020-11-27', '2020-12-24', '2021-11-26', '2018-12-24']  
-    date_list = spot_df['Date'].unique()
     if ticker == 'QQQ':
         spot_df = spot_df.loc[spot_df['Datetime'].dt.year >= 2012].reset_index(drop=True)
     
-for sl_pct in sl_pct_list[1:]:
-    # break
-    tradebook = straddle_re_entry(ticker, spot_df, sl_pct = sl_pct)
-    
-    result[f'{sl_pct}'] = tradebook
-    points[f'{sl_pct}'] = tradebook['PL'].sum()
-    
-    print(sl_pct)
-    
+    for sl_pct in sl_pct_list[1:]:
+        tradebook = straddle_re_entry(ticker, spot_df, sl_pct = sl_pct)
 
+        result[f'{sl_pct}'] = tradebook
+        points[f'{sl_pct}'] = tradebook['PL'].sum()
 
-
-
+        print(sl_pct)
 
 tradebook['PL'].sum()
 
@@ -366,9 +345,6 @@ counts.sum(axis=1)
 mdf.sum(axis=0)
 counts.sum(axis=0)
 
-tradebook.to_csv('D:\\Coding\\straddle_with_sl_entry_again\\straddle_with_sl_entry_again.csv')
-
-
 np_sl = tradebook.loc[(tradebook['status'] == 'C')]
 nc_sl = tradebook.loc[(tradebook['status'] == 'P')]
 
@@ -378,9 +354,7 @@ both_sl = tdf.loc[tdf['status'] == 0]
 no_sl = tradebook.loc[tradebook['status'] == 'CP']
 
 def profit_loss_number(DF):
-    
     df = DF.copy()
-    
     pdf = df.loc[df['PL'] > 0]
     ldf = df.loc[df['PL'] <= 0]
     
