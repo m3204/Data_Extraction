@@ -4,20 +4,12 @@ Created on Thu Dec 29 17:18:32 2022
 
 @author: Dell
 """
-
 import pandas as pd
 import datetime as dt
 import os
 import numpy as np
 import glob
 import pickle
-
-# def get_spot(ticker):
-    
-#     file_name = os.listdir(f'D:\\Data\\Index_Future\\{ticker}')[0]
-    
-#     df = pd.read_csv(f'D:\Data\Index_Future\{ticker}\\{file_name}')
-    
 
 class Spot_Fut(object):
     
@@ -37,45 +29,21 @@ class Spot_Fut(object):
     
     def day_df(self, ticker, timeframe=None, agg_func = {'Date' : 'first', 'Open':'first','High':'max','Low': 'min','Last' : 'last', 'Volume':'sum'}):
         df = pd.read_parquet(f'D:\\Spot_Fut\\1 DAY\\{ticker}.parquet')
-        
         df['Date'] = pd.to_datetime(df['Date'])
-        
         if timeframe != None:
         # df.set_index('Date', inplace=True)
             df.index = df['Date']
-            
             try:
                 df.rename(columns = {'Close' : 'Last'}, inplace=True)
             except:
                 pass
-            
             df.columns
             df = df.resample(timeframe, label='right', origin='start').agg(agg_func).dropna()
-            
             return df.rename_axis('Date_last').reset_index()
-        
         else:
             return df
-    
-    # assigning some required variables as constructer
-    def __init__(self):
-        pass
-        # self.df = pd.read_csv("C:\\Users\\Dell\\Desktop\\BANKNIFTY_1minute.csv")
-        # self.df.loc[:,'Date'] = pd.to_datetime(self.df.Date.astype(str)+' '+self.df.Time.astype(str))
-        # self.df.drop('Time', axis=1, inplace=True)
-        # self.df.set_index('Date', inplace=True)
         
-        ''' https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases
-        reference link to provide start date, interval, end date in required format
-        '''
-        
-        
-        # self.time = time
-        # self.start = pd.to_datetime(start)
-        # self.end = pd.to_datetime(end)
-    
-    
-    # converting data in demanded time frame and returning it
+    # convert data in demanded time frame and returning it
     def convert_interval(self, DF, interval, sec_type = None, custom_origin = None, agg_func={'Time' : 'last', 'Date' : 'last','Open':'first','High':'max','Low': 'min','Last' : 'last', 'Volume':'sum'}):
         df = DF.copy()
         if sec_type == 'Spot':
@@ -83,70 +51,37 @@ class Spot_Fut(object):
                 df.loc[:,'Datetime'] = pd.to_datetime(df.Date.astype(str)+' '+df.Time.astype(str))
             except:
                 pass
-            # df.drop('Time', axis=1, inplace=True)
-            
-            # df.set_index('Datetime', inplace=True)
             def convert(grp):
                 grp = grp.loc[(grp['Time'] >= pd.to_datetime('09:30:00').time()) & (grp['Time'] <= pd.to_datetime('16:00:00').time())]
-                
                 grp.set_index('Datetime', inplace=True)
-                
                 grp = grp.resample(interval, origin='start').agg(agg_func)
-                
                 return grp.reset_index()
-            
-            
             # df_grp = df.groupby(pd.Grouper(freq=interval)).agg(agg_func)
-            
             day_df = df.groupby(df['Date'])
-            
-            
-            
             return pd.DataFrame(day_df.apply(convert)).reset_index(drop=True)
         elif sec_type == 'Fut':
-            
             origin = '17:00:00'
-            
-            if custom_origin != None:
+            if custom_origin:
                 origin = custom_origin
-            
-            
             # start_time = origin
             # end_time = end_time
-            
             try:
                 df.set_index('Datetime', inplace=True)
             except:
                 pass
-            
-            
             if agg_func == {'Time' : 'last', 'Date' : 'last','Open':'first','High':'max','Low': 'min','Last' : 'last', 'Volume':'sum'}:
                 agg_func = {'Time' : 'last', 'Date' : 'last','Open':'first','High':'max','Low': 'min','Last' : 'last', 'Volume':'sum', 'No. Trades' : 'sum', 'RIC' : 'first'}
             
             def convert(group):
                 group = group.resample(rule = interval, origin='start').agg(agg_func)
-                
                 return group.reset_index()
-            
-            # if end_time != None:
-            #     groups = df.groupby(pd.Grouper(freq='24H', origin=origin, label='right', dropna=True, Closed = 'right')).apply(lambda x : x.between_time(start_time, end_time))
-            #     groups = groups.reset_index(level=[1])
-            #     groups.reset_index(inplace=True, drop=True)
-            #     groups.set_index('Datetime', inplace=True)
-            #     groups = groups.groupby(pd.Grouper(freq='24H', origin=origin, label='right', dropna=True, closed = 'right'))
-                
-            # else:
+
             groups = df.groupby(pd.Grouper(freq='24H', origin=origin, label='right', dropna=True))
-            
             return pd.DataFrame(groups.apply(convert)).dropna().reset_index(drop=True)
-    
-            
+        
     #  returning filter data
     def get_datewise_data(self, DF, start=None,  end=None, interval=None, date=None):
         data = DF.copy()
-        
-        
-
         if interval != None:
             data = self.convert_interval(data, interval)
         
@@ -175,7 +110,6 @@ class Spot_Fut(object):
         if date != None:
             date = pd.Timestamp(date).date()
             return data.loc[data.Datetime.date == date].reset_index(drop=True)
-            
 
     def convert_daywise_interval_data(self, DF, dayname, interval='1t', agg_func={'Time' : 'first', 'Date' : 'first', 'WeekDay' : 'first','Open':'first','High':'max','Low': 'min','Last' : 'last', 'Volume':'sum'}):
         df = DF.copy()
@@ -183,39 +117,28 @@ class Spot_Fut(object):
             df['Datetime'] = pd.to_datetime(df['Date'].astype(str) + ' ' + df['Time'].astype(str))
         except:
             pass
-        
         df.insert(1, 'WeekDay', df['Datetime'].dt.day_name())
-        
         if type(dayname) == list:
             day_df = df.loc[df['WeekDay'].isin(dayname)]
         else:
             day_df = df.loc[df['WeekDay'] == dayname]
-        
         day_df.set_index('Datetime', inplace=True)
-
         day_df = day_df.groupby(pd.Grouper(freq=interval)).agg(agg_func)
         return day_df.dropna()       
-
-  
-    
     def get_timely_data(self, DF, time=None, time_range=None, start_time=None):
         df = DF.copy()
-        
         try:
             df['Datetime'] = pd.to_datetime(df['Datetime'])
         except:
             pass
-        
         try:
             df['Time'] = pd.to_datetime(df['datetime']).dt.time
         except:
-            df['Time'] = pd.to_datetime(df['Datetime']).dt.time
-        
+            df['Time'] = pd.to_datetime(df['Datetime']).dt.time 
         if time_range != None:
             try:
                 try:
-                    time = (pd.to_datetime(pd.Series(time_range), format='%I%M%p')).dt.time
-                    
+                    time = (pd.to_datetime(pd.Series(time_range), format='%I%M%p')).dt.time  
                 except:
                     time = (pd.to_datetime(pd.Series(time_range), format='%H%M%S')).dt.time
             except ValueError:
@@ -226,8 +149,7 @@ class Spot_Fut(object):
         elif start_time != None:
             try:
                 try:
-                    start_time = pd.to_datetime(pd.Series(time), format='%I%M%p').dt.time[0]
-                    
+                    start_time = pd.to_datetime(pd.Series(time), format='%I%M%p').dt.time[0] 
                 except:
                     start_time = pd.to_datetime(pd.Series(time), format='%H%M%S').dt.time[0]
             except ValueError:
@@ -245,8 +167,7 @@ class Spot_Fut(object):
         elif time != None:
             try:
                 try:
-                    time = pd.to_datetime(pd.Series(time), format='%I%M%p').dt.time[0]
-                    
+                    time = pd.to_datetime(pd.Series(time), format='%I%M%p').dt.time[0]  
                 except:
                     time = pd.to_datetime(pd.Series(time), format='%H%M%S').dt.time[0]
             except ValueError:
@@ -259,22 +180,17 @@ class Spot_Fut(object):
             #         value = df[df['Date'] == date].loc[df.Time >= time].iloc[0]
             #     time_df = pd.concat([time_df, value])
             
-            time_df = df.loc[(df['Time'] == time)]
-            
+            time_df = df.loc[(df['Time'] == time)] 
         return time_df.reset_index(drop=True)
+    
     def outliers_removed(self, DF):
         df = DF.copy()
-
         df['oh'] = (df['High']/df['Open']) - 1
         df['ol'] = (df['Low'] / df['Open']) - 1
         df['oc'] = (df['Last'] / df['Open']) - 1
-
-
         mask = ((df['oh'].between(-0.05, 0.05)) & (df['ol'].between(-0.05, 0.05)) & (df['oc'].between(-0.05, 0.05)))
-
         outlier = df.drop(df[mask].index)
         date_list = outlier['Date'].unique().tolist()
-        
         df = df.loc[~df['Date'].isin(date_list)]
         return df, date_list
 
@@ -324,18 +240,15 @@ class Option_Data(object):
         if opt_type == 'C':
             if expiry[4] == '-':
                 month_code = call_month[month]
-                
             else:
                 month = expiry[4:6]
                 year = expiry[2:4]
                 day = expiry[6:8]
                 month_code = call_month[month]
             return f'{ticker}{month_code}{day}{year}{strike}'
-            
         elif opt_type == 'P':
             if expiry[4] == '-':
-                month_code = put_month[month]
-                
+                month_code = put_month[month] 
             else:
                 month = expiry[4:6]
                 year = expiry[2:4]
@@ -357,13 +270,9 @@ class Option_Data(object):
         month = expiry[5:7]
         day = expiry[8:10]
         year = expiry[2:4]
-        
-        
-        
         if opt_type == 'C':
             if expiry[4] == '-':
                 month_code = call_month[month]
-                
             else:
                 month = expiry[4:6]
                 year = expiry[2:4]
@@ -394,14 +303,12 @@ class Option_Data(object):
                 
             return (f'{month_codec}{day}{year}', f'{month_codep}{day}{year}')
 
-    
     def read_df(self, ticker, strike=None, expiry=None, opt_type=None, Date=None):   #, strike_range=None):
         try:
             if opt_type != None and strike != None and expiry != None and Date == None:
                 ric = self.encoder(ticker, strike=strike, opt_type=opt_type, expiry=expiry)
                 df = pd.read_csv(f'D:\\Options RIC\\{ticker}\\{ticker} RIC\\{ric}.csv')
                 return df
-            
             
             elif opt_type == None and strike != None and Date == None and expiry != None:
                 ric_call = self.encoder(ticker, strike, opt_type='C', expiry=expiry)
@@ -411,7 +318,6 @@ class Option_Data(object):
                     # cdf['Date'] = pd.to_datetime(df['Datetime']).dt.date
                     # cdf['Time'] = pd.to_datetime(df['Datetime']).dt.time
                     pdf = pd.read_csv(f'D:\\Options RIC\\{ticker}\\{ticker} RIC\\{ric_put}.csv')
-                    
                     df = pd.concat([cdf, pdf], ignore_index=True)
                     return df
                     
@@ -419,7 +325,6 @@ class Option_Data(object):
                     print(e)
                     print('please input confirmed expiry and strike... :)')
     
-        
             elif strike == None and Date == None and expiry != None:
                 if opt_type == None:
                     ric_c = self.year_date_month_code(expiry)[0]
@@ -452,22 +357,16 @@ class Option_Data(object):
                     for i in dire:
                         dft = pd.read_csv(i)
                         df = pd.concat([df, dft], ignore_index=True)
-                        
-                        
                     return df
             elif strike != None and expiry == None:
                 if opt_type == None:
                     strike = str(round(int(float(strike)*100), 5)).zfill(5)[:5]
                     path_s = f'D:\\Options RIC\\{ticker}\\{ticker} RIC\\*{strike}.csv'
-                    
                     dir_s = glob.glob(path_s)
-                    
                     df = pd.DataFrame()
-                    
                     for s in dir_s:
                         sdf = pd.read_csv(s)
                         df = pd.concat([df, sdf], ignore_index=True)
-                    
                     if Date != None:
                         try:
                             Date = pd.to_datetime(Date).date()
@@ -481,11 +380,8 @@ class Option_Data(object):
                 elif opt_type != None:
                     strike = str(round(int(float(strike)*100), 5)).zfill(5)[:5]
                     path_s = f'D:\\Options RIC\\{ticker}\\{ticker} RIC\\*{strike}.csv'
-                    
                     dir_s = glob.glob(path_s)
-                    
                     df = pd.DataFrame()
-                    
                     for s in dir_s:
                         sdf = pd.read_csv(s)
                         df = pd.concat([df, sdf], ignore_index=True)
@@ -501,12 +397,7 @@ class Option_Data(object):
                     elif Date == None:
                         df = df.loc[df['Opt_Type'] == opt_type]
                         return df
-                        
-                        
-                    
-                
-                
-                
+
             elif Date != None:
                 try:
                     Date = pd.to_datetime(Date).date()
@@ -546,11 +437,7 @@ class Option_Data(object):
                             
                     date_df = df.loc[pd.to_datetime(df['Datetime']).dt.date == Date].reset_index(drop=True)
                     return date_df
-                            
                 
-                    
-                    
-                    
                 elif strike != None and expiry != None:
                     if opt_type == None:
                         ric_call = self.encoder(ticker, strike, opt_type='C', expiry=expiry)
@@ -562,10 +449,6 @@ class Option_Data(object):
                             pdf = pd.read_csv(f'D:\\Options RIC\\{ticker}\\{ticker} RIC\\{ric_put}.csv')
                             
                             df = pd.concat([cdf, pdf], ignore_index=True)
-                            
-                           
-                            
-                            
                         except Exception as e:
                             print(e)
                             print('please input confirmed expiry and strike... :)')
@@ -573,33 +456,25 @@ class Option_Data(object):
                     elif opt_type != None:
                         ric = self.encoder(ticker, strike=strike, opt_type=opt_type, expiry=expiry)
                         df = pd.read_csv(f'D:\\Options RIC\\{ticker}\\{ticker} RIC\\{ric}.csv')
-                        
-                    
-                    
+
                     date_df = df.loc[pd.to_datetime(df['Datetime']).dt.date == Date].reset_index(drop=True)
                     return date_df
+        
         except Exception as e:
-
             print(e)
             print('some error in finding RIC Code')
             
-            
-             
     def get_strike_range(self, ticker, strike_range=None, strike_list= None, expiry=None, opt_type=None, Date=None):
         
         df = pd.DataFrame()
         if strike_range == None and strike_list != None:
-            
             for s in strike_list:
                 strike_df = self.read_df(ticker, strike = s, expiry=expiry, opt_type=opt_type, Date=Date)
                 df = pd.concat([df, strike_df], ignore_index=True)
-                
             return df
         
         elif strike_range != None and strike_list == None:
-            
             strike_list = list(range(strike_range[0], strike_range[1]+1))
-            
             for s in strike_list:
                 strike_df = self.read_df(ticker, strike = s, expiry=expiry, opt_type=opt_type, Date=Date)
                 df = pd.concat([df, strike_df], ignore_index=True)
@@ -629,10 +504,7 @@ class Option_Data(object):
             df['Datetime'] = pd.to_datetime(df['Datetime'])
         except:
             pass
-        
-        
-            
-        
+
         if time is not None:
             try:
                 time = pd.to_datetime(time, format='%H%M%S').time()
@@ -649,7 +521,6 @@ class Option_Data(object):
                 pass
 
             df = df.loc[(df['Datetime'].dt.time >= time_range[0]) & (df['Datetime'].dt.time < time_range[1])]       
-            
             return df
         
         elif start_time is not None:
@@ -660,18 +531,7 @@ class Option_Data(object):
             
             df = df.loc[df['Datetime'].dt.time >= start_time]
             return df
-                            
-                        
-                    
-                    
-                
-                    
-                    
-                    
-                    
-                    
-            
-            
+      
     def convert_interval(self, DF, interval, agg_func={'WeekDay':'last','Expiry':'last', 'Strike' : 'last','Open':'first','High':'max','Low': 'min','Last' : 'last', 'Volume':'sum', 'Opt_Type' : 'last', 'RIC':'first'}):
         df = DF.copy()
         try:
@@ -683,36 +543,26 @@ class Option_Data(object):
         
         df.insert(1, 'WeekDay', df['Datetime'].dt.day_name())
         df.reset_index(drop=True, inplace=True)
-        
         df.sort_values(by=['Strike','Date', 'Time'], inplace=True)
-        
         df.set_index('Datetime', inplace=True)
         
         unq_date = df['Date'].unique()
         opt_typ = df['Opt_Type'].unique()
-        
         dfd = pd.DataFrame()
         
         
         for i in range(len(unq_date)):
             for o in opt_typ:
-                
                 day_df = df.loc[(df['Date'] == unq_date[i]) & (df['Opt_Type'] == o)]
-                
                 day_df = day_df.resample(interval, origin='start').agg(agg_func)
                 day_df.reset_index(inplace=True)
-                
                 dfd = pd.concat([dfd, day_df], ignore_index=True)
-            
-        
+                
         # df_grp = df.groupby(pd.Grouper(freq=interval)).agg(agg_func)
         return dfd.dropna()
-        
-        
 
 class Perfromance_Measure:
-    
-    
+
     def cagr(self, DF, factor=1):
         df = DF.copy()
         # df["ret"] = df['Adj Close'].pct_change()
@@ -720,10 +570,7 @@ class Perfromance_Measure:
         n = len(df)/(252*factor)
         CAGR = ((df['Cummulative_Return'].iloc[-1])**(1/n)) - 1 
         return CAGR
-        
-    
-    
-    
+
     def volatility(self, DF, factor=1):
         df = DF.copy()
     #     df['Return'] = df['Adj Close'].pct_change()
@@ -731,13 +578,10 @@ class Perfromance_Measure:
         # vol = (df['Last'].pct_change()).std()*np.sqrt(252*factor)
         
         return vol
-    
-    
-    
+
     def sharpe(self, DF, rf):
         df = DF.copy()
         return (self.cagr(df) - rf)/self.volatility(df)
-    
     
     def sortino(self, DF, rf):
         df = DF.copy()
@@ -746,7 +590,6 @@ class Perfromance_Measure:
         neg_vol = pd.Series(negetive_return[negetive_return!=0]).std()
         return (self.cagr(df) - rf)/neg_vol
 
-    
     def max_drawdown(self, DF):
         df = DF.copy()
         # df['ret'] = df['Last'].pct_change()
@@ -755,11 +598,7 @@ class Perfromance_Measure:
         df['drawdown'] = df['cum_roll_max'] - df['cum_return']
         return (df['drawdown']/df['cum_roll_max']).max()
 
-
-
 class Indicators():
-    
-    
     
     def atr(self, DF, n=14):
         df = DF.copy()
@@ -781,7 +620,6 @@ class Indicators():
             df['ATR'] = df['TR'].ewm(span=n, min_periods=n-1).mean()
             return df["ATR"]
     
-    
     def macd(self, Df, a=12, b=26, c=9):
         df = Df.copy()
     #     df['ma_fast'] = df['Last'].rolling(12).mean()   # Simple moving avg
@@ -799,8 +637,7 @@ class Indicators():
         df['Low_Band'] = df['Middle_Band'] - stdev*df['Last'].rolling(n).std(ddof=0)
         df['BB_Width'] = df['Upper_Band'] - df['Low_Band']
         return df['Middle_Band'], df['Upper_Band'], df['Low_Band'], df['BB_Width']
-        
-    
+
     def rsi(self, DF, n=14):
         df = DF.copy()
         df['change'] = df['Last'] - df['Last'].shift(1)
@@ -811,8 +648,7 @@ class Indicators():
         df['rs'] = df['Avg Gain']/df['Avg Loss']
         df['rsi'] = 100 - (100/(1+df['rs']))
         return df['rsi']
-    
-    
+
     def adx(self, DF, n=14):
         df = DF.copy()
         df['upmove'] = df['High'] - df['High'].shift(1)
@@ -845,21 +681,14 @@ class Indicators():
         df = DF.copy()
         df.drop('Last', axis=1, inplace=True)
         df.reset_index(inplace=True)
-        
         df.columns = ['date', 'open', 'high', 'low', 'Last', 'volume']
-        
         renko_df = Renko(df)
-        
         renko_df.brick_size = 3 * round(self.atr(hourly_df, 120).iloc[-1], 0)
-        
         renko_df = renko_df.get_ohlc_data()
-        
         return renko_df
-    
-    
+
     def obv(self, DF):
         df = DF.copy()
-        
         df['Daily_Ret'] = df['Adj Last'].pct_change()
         
         df['direction'] = np.where(df['Daily_Ret'] >=0, 1, -1)
@@ -873,7 +702,6 @@ class Indicators():
     def slope(self, DF, column, n):
         df = DF.copy()
         ser = df[f'{column}']
-        
         slopes = [i*0 for i in range(n-1)]
         
         for i in range(n, len(ser)+1):
@@ -884,20 +712,15 @@ class Indicators():
             x_scaled = (x - x.min()) / (x.max() - x.min())
             
             x_scaled = sm.add_constant(x_scaled)
-            
             model = sm.OLS(y_scaled, x_scaled)
             
             results = model.fit()
-            
             # results.summary()
-            
             slopes.append(results.params[-1])
             
         slope_angle = (np.rad2deg(np.arctan(np.array(slopes))))
-        
         return np.array(slope_angle)
 
-    
     def supertrend(self, DF, atr_period, multiplier):
         df = DF.copy()
         
@@ -911,11 +734,11 @@ class Indicators():
                        Last.shift() - low]
         true_range = pd.concat(price_diffs, axis=1)
         true_range = true_range.abs().max(axis=1)
-        # default ATR calculation in supertrend indicator
+        
         atr = true_range.ewm(alpha=1/atr_period,min_periods=atr_period).mean() 
         # df['atr'] = df['tr'].rolling(atr_period).mean()
         
-        # HL2 is simply the average of high and low prices
+        
         hl2 = (high + low) / 2
         # upperband and lowerband calculation
         # notice that final bands are set to be equal to the respective bands
@@ -955,15 +778,11 @@ class Indicators():
             'Final Lowerband': final_lowerband,
             'Final Upperband': final_upperband
         }, index=df.index)
-        
         df = df.join(df2)
-        
         return df
     
     def vwap(self, DF):
-        
         df = DF.copy()
-        
         try:
             df['Datetime'] = pd.to_datetime(df['Datetime'])
         except:
@@ -971,19 +790,12 @@ class Indicators():
         
         def operations(group):
             hlc3 = (group['High'] + group['Low'] + group['Last']) / 3
-            
             cumvol = group['Volume'].cumsum()
-            
             cumvolprice = (hlc3 * group['Volume']).cumsum()
-            
             group['VWAP'] = cumvolprice / cumvol
-            
             return group['VWAP']
         
-        df = DF.copy()
-        
         group = df.groupby(df['Datetime'].dt.date)
-
         return group.apply(operations).values
         
         # for d in df['Datetime'].dt.date.unique():
@@ -1002,42 +814,31 @@ class Indicators():
         #     df.loc[(df['Date'] == d), 'VWAP'] = (df.loc[(df['Date'] == d), 'CumVolPrice'] /
         #                                          df.loc[(df['Date'] == d), 'CumVol'])
             
-        #     df.loc[(df['Date'] == d), 'VWAP_STD'] = df.loc[(df['Date'] == d), 'VWAP']
-            
-            
+        #     df.loc[(df['Date'] == d), 'VWAP_STD'] = df.loc[(df['Date'] == d), 'VWAP'] 
         # return df['VWAP']
 
     def heiken_ashi(self, DF):
         df = DF.copy()
-        
         df.reset_index(drop=True, inplace=True)
         
         df['Last'] = (df['Open'] + df['High'] + df['Low'] + df['Last']) / 4
         # df['Open'].iloc[0] = (df['Open'][0] + df['Last'][0]) / 2
         df.loc[1:, 'Open'] = (df['Open'].shift(1) + df['Last'].shift(1)) / 2
         
-        
         df['High'] = df[['High', 'Last', 'Open']].max(axis=1)
         df['Low'] = df[['Low', 'Open', 'Last']].min(axis=1)
         
         return df
-
-
-class save_file(object):
     
+class save_file(object):
     def save_pickle(self, df, path):
-        
         with open(path, 'wb') as f:
-            pickle.dump(df, f)
-            
+            pickle.dump(df, f) 
         print('Done')
 
-
     def open_df(self, path):
-        
         with open(path, 'rb') as f:
             data = pickle.load(f)
-        
         return data
 
 
